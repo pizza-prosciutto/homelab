@@ -34,8 +34,6 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=proxy"
-      - "--api.dashboard=true"
-      - "--api.insecure=true"
       - "--log.level=INFO"
       - "--accesslog=true"
       - "--metrics.prometheus=true"
@@ -57,10 +55,10 @@ services:
       - "traefik.http.routers.miniflux.entrypoints=web"
       - "traefik.http.services.miniflux.loadbalancer.server.port=8080"
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}?sslmode=disable
+      - DATABASE_URL=postgres://${MINIFLUX_DB_USER}:${MINIFLUX_DB_PASSWORD}@db/${MINIFLUX_DB}?sslmode=disable
       - RUN_MIGRATIONS=1
       - CREATE_ADMIN=1
-      - ADMIN_USERNAME=${MINIFLUX_USER}
+      - ADMIN_USERNAME=${MINIFLUX_ADMIN}
       - ADMIN_PASSWORD=${MINIFLUX_PASSWORD}
       - AUTH_PROXY_HEADER=Cf-Access-Authenticated-User-Email
       - TRUSTED_REVERSE_PROXY_NETWORKS=172.22.0.0/16
@@ -77,12 +75,10 @@ services:
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+    env_file: .env
     volumes:
-      - miniflux-db:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: [ "CMD", "pg_isready", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}" ]
       interval: 10s
@@ -91,7 +87,8 @@ services:
       - app
 
 volumes:
-  miniflux-db:
+  pgdata:
+
 
 networks:
   proxy:
@@ -103,3 +100,4 @@ networks:
     name: app
   edge:
     name: edge
+
